@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #09090B;
+    color: #FAFAFA;
+  }
+
+  ::selection {
+    background-color: #DFE104;
+    color: #000000;
+  }
+
+  /* Custom scrollbar — brutalist */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #09090B;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3F3F46;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #DFE104;
+  }
+}
+
+@layer components {
+  .font-data {
+    font-family: "JetBrains Mono", monospace;
+  }
+}
+
+/* Noise texture overlay */
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-container {
+    animation: none !important;
+  }
+  .marquee-container .rfm-marquee {
+    animation: none !important;
+  }
+}
