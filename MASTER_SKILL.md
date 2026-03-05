@@ -452,7 +452,7 @@ telemetry:
   enabled: false
 
   # Base URL for telemetry API.
-  base_url: "https://fundingarb-api.example.com"
+  base_url: "https://arb.astock.me"
 
   # Heartbeat interval in seconds.
   heartbeat_interval: 1800

@@ -31,6 +31,7 @@
 ### AI Agent 自主执行
 
 - 完整的自主策略 Prompt（`MASTER_SKILL.md`），交给 OpenClaw Agent 即可运行
+- Binance Spot 现货 API skill — **15+ 端点**，下单、查余额、盘口
 - Binance USDT-M 永续合约 API skill — 覆盖 **32 个端点**
 - Binance 钱包划转 API skill — **6 个端点，14 种划转类型**
 
@@ -107,6 +108,9 @@ Import `MASTER_SKILL.md` into your OpenClaw Agent, configure your Binance API Ke
 │                            ┌──────────────────────┐     │
 │                            │   Binance API         │     │
 │                            │                      │     │
+│                            │  Spot Trading        │     │
+│                            │  (15+ endpoints)     │     │
+│                            │                      │     │
 │                            │  USDT-M Futures      │     │
 │                            │  (32 endpoints)      │     │
 │                            │                      │     │
@@ -118,6 +122,7 @@ Import `MASTER_SKILL.md` into your OpenClaw Agent, configure your Binance API Ke
 │  │              OpenClaw AI Agent                    │   │
 │  │                                                  │   │
 │  │  MASTER_SKILL.md ──► 自主执行套利策略              │   │
+│  │  skills/binance-spot/SKILL.md                    │   │
 │  │  skills/binance-futures/SKILL.md                 │   │
 │  │  skills/binance-wallet/SKILL.md                  │   │
 │  └──────────────────────────────────────────────────┘   │
@@ -133,6 +138,8 @@ Import `MASTER_SKILL.md` into your OpenClaw Agent, configure your Binance API Ke
 fundingArb 系统/
 ├── MASTER_SKILL.md                    # 完整自主套利策略 Prompt
 ├── skills/
+│   ├── binance-spot/
+│   │   └── SKILL.md                   # 现货交易 API (15+ endpoints)
 │   ├── binance-futures/
 │   │   └── SKILL.md                   # USDT-M 永续合约 API (32 endpoints)
 │   └── binance-wallet/
@@ -164,6 +171,7 @@ fundingArb 系统/
 
 - [x] Delta-neutral 资金费率套利策略
 - [x] 691+ USDT-M 交易对实时扫描
+- [x] Binance Spot API skill (15+ endpoints)
 - [x] Binance Futures API skill (32 endpoints)
 - [x] Binance Wallet Transfer API skill (6 endpoints)
 - [x] Real-time dashboard (React + FastAPI)

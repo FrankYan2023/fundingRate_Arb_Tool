@@ -3,6 +3,9 @@ import Marquee from "react-fast-marquee";
 import { useFundingRates } from "../hooks/useFundingRates";
 import { useStats } from "../hooks/useStats";
 
+const GITHUB_RAW_URL =
+  "https://raw.githubusercontent.com/yansc153/fundingRate_Arb_Tool/main/MASTER_SKILL.md";
+
 const PROMPT_PREVIEW = `---
 title: Funding Rate Arbitrage Agent
 description: >
@@ -23,32 +26,81 @@ metadata:
 # Funding Rate Arbitrage Agent — Complete Autonomous Strategy
 
 > READ THIS ENTIRE DOCUMENT BEFORE EXECUTING ANY ACTION.
-> This file is the single source of truth for the funding rate
-> arbitrage strategy. You (the AI agent) must follow every
-> instruction precisely, in order, with no deviation.
 
-## STATE MACHINE
-IDLE → SCANNING → OPPORTUNITY_FOUND → AWAITING_CONF
-→ EXECUTING_ENTRY → POSITION_HELD → EXIT_TRIGGERED
-→ EXECUTING_EXIT → SETTLING → back to SCANNING
+## STATE MACHINE (13 states)
+IDLE -> SCANNING -> OPPORTUNITY_FOUND -> AWAITING_CONF
+  -> EXECUTING_ENTRY -> POSITION_HELD -> EXIT_TRIGGERED
+  -> EXECUTING_EXIT -> SETTLING -> back to SCANNING
+  (+ REJECT, EMERGENCY_CLOSE branches)
 
-## SKILLS ORCHESTRATION
-Phase 1: GET /fapi/v1/premiumIndex (scan all symbols)
-Phase 2: Position sizing (GET /api/v3/account + /fapi/v2/account)
-Phase 3: Pre-flight risk checks (6 gates)
-Phase 4: Capital transfer (POST /sapi/v1/asset/transfer)
-Phase 5: Entry (SELL futures → BUY spot, simultaneous)
-Phase 6: Monitor every 30min (funding rate + margin + P&L)
-Phase 7: Exit conditions (4 priority levels)
-Phase 8: Close spot → close futures → transfer back
-Phase 9: Settlement + P&L report
+## 9-PHASE SKILLS ORCHESTRATION
+
+Phase 1 SCANNING
+  GET /fapi/v1/premiumIndex -> filter by rate >= 0.05%
+  GET /fapi/v1/ticker/24hr -> volume >= $10M
+  Compute net_yield = (rate * hold_periods) - fees - basis
+
+Phase 2 POSITION SIZING
+  GET /api/v3/account (spot balance)
+  GET /fapi/v2/account (futures balance)
+  size = min(available * 20%, $10,000 cap)
+  Round to exchange LOT_SIZE precision
+
+Phase 3 PRE-FLIGHT RISK CHECKS (6 gates)
+  1. Position count < max_concurrent (3)
+  2. Margin ratio < 50%
+  3. Position size >= $100
+  4. Spot orderbook slippage < 0.3%
+  5. Futures orderbook slippage < 0.3%
+  6. Symbol not in cooldown (1h after exit)
+
+Phase 4 CAPITAL TRANSFER
+  POST /sapi/v1/asset/transfer (MAIN_UMFUTURE or reverse)
+  Verify transfer confirmed before proceeding
+
+Phase 5 ENTRY EXECUTION
+  POST /fapi/v1/leverage { leverage: 1 }
+  POST /fapi/v1/order { side: SELL, type: MARKET }  <- futures SHORT first
+  POST /api/v3/order  { side: BUY, type: MARKET }   <- spot BUY second
+  If spot fails after futures filled -> EMERGENCY_CLOSE
+
+Phase 6 MONITORING (every 30min)
+  GET /fapi/v1/premiumIndex -> current funding rate
+  GET /fapi/v2/account -> margin ratio, unrealized PnL
+  Send report after each 8h funding settlement
+
+Phase 7 EXIT CONDITIONS (4 priority levels)
+  P1 EMERGENCY: margin > 80% | API down | liquidation near
+  P2 RISK:      funding < 0.01% | PnL < -1.5%
+  P3 PROFIT:    PnL >= +2% | rate dropping trend
+  P4 MANUAL:    user requests close
+
+Phase 8 EXIT EXECUTION
+  POST /fapi/v1/order { side: BUY, reduceOnly: true }
+  POST /api/v3/order  { side: SELL }
+  POST /sapi/v1/asset/transfer (move funds back)
+
+Phase 9 SETTLEMENT
+  Calculate: funding_collected - entry_fees - exit_fees - basis_cost
+  Report final P&L in USDT and percentage
+  Send telemetry (if opted in)
+
+## TELEMETRY (opt-in)
+POST https://arb.astock.me/api/telemetry/heartbeat
+  { session_id, environment, state, symbol, version }
+  Every 30 minutes while agent is running
 
 ## SAFETY RULES
 - ALWAYS start on testnet
 - NEVER use leverage > 1x
 - ALWAYS hedge both legs simultaneously
 - Emergency close if margin ratio > 80%
-...`;
+- Futures SHORT first, spot BUY second (always)
+- Max 3 retries on API errors, then EMERGENCY_CLOSE
+- User confirmation required for entry and non-emergency exit
+
+[Full 2000+ line prompt with exact API calls, error handling,
+ and recovery procedures available at GitHub]`;
 
 export default function Home() {
   const [copied, setCopied] = useState(false);
@@ -71,12 +123,18 @@ export default function Home() {
 
   const handleCopy = async () => {
     try {
-      // In production this would fetch the full MASTER_SKILL.md
-      await navigator.clipboard.writeText(PROMPT_PREVIEW);
       setCopied(true);
+      // Fetch the full MASTER_SKILL.md from GitHub
+      const res = await fetch(GITHUB_RAW_URL);
+      const fullPrompt = res.ok ? await res.text() : PROMPT_PREVIEW;
+      await navigator.clipboard.writeText(fullPrompt);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback
+      // Fallback to preview
+      try {
+        await navigator.clipboard.writeText(PROMPT_PREVIEW);
+      } catch { /* ignore */ }
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -138,7 +196,7 @@ export default function Home() {
           <div className="flex items-center justify-between px-6 py-4 border-b-2 border-border">
             <div>
               <h2 className="text-lg font-bold uppercase tracking-tighter">AGENT PROMPT</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">复制到你的 OpenClaw 🦞 即可运行</p>
+              <p className="text-xs text-muted-foreground mt-0.5">一键复制完整 2000+ 行 Prompt（从 GitHub 实时拉取）</p>
             </div>
             <button
               onClick={handleCopy}

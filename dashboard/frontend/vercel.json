@@ -1,0 +1,10 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/stats", "destination": "/api/agents" },
+    { "source": "/api/telemetry/heartbeat", "destination": "/api/agents" },
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ]
+}
