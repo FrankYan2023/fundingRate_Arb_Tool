@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FundingRate } from "../lib/api";
-import { mockFundingRates } from "../lib/mockData";
 
-const POLL_INTERVAL = 30_000;
+const POLL_INTERVAL = 60_000; // 60s — Binance rate is cached for 60s anyway
 
 // Thresholds matching MASTER_SKILL.md
 const ARB_THRESHOLD = 0.0005;
@@ -25,23 +24,23 @@ function transformRate(r: BackendRate): FundingRate {
 
   const nowMs = Date.now();
   const nextFundingSec = Math.max(0, Math.floor((r.next_funding_time - nowMs) / 1000));
-  const basis = r.index_price > 0 ? ((r.mark_price - r.index_price) / r.index_price) * 100 : 0;
+  const basis = r.index_price > 0 ? Math.abs(((r.mark_price - r.index_price) / r.index_price) * 100) : 0;
 
   return {
     symbol: r.symbol,
     fundingRate: r.last_funding_rate,
-    estNetYield: r.net_yield_after_fees_pct / 100 / (3 * 365), // back to per-8h decimal
+    estNetYield: r.net_yield_after_fees_pct / 100 / (3 * 365),
     apy: Math.abs(r.annualized_rate_pct),
-    basis: Math.abs(basis),
+    basis,
     nextFunding: nextFundingSec,
-    openInterest: 0, // not returned by backend yet
+    openInterest: 0,
     signal,
   };
 }
 
 export function useFundingRates() {
-  const [data, setData] = useState<FundingRate[]>(mockFundingRates);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<FundingRate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRates = useCallback(async () => {
@@ -53,18 +52,15 @@ export function useFundingRates() {
         const rates: BackendRate[] = json.data ?? json.rates ?? json;
         if (Array.isArray(rates) && rates.length > 0) {
           const transformed = rates.map(transformRate);
-          // Sort by absolute funding rate descending
           transformed.sort((a, b) => Math.abs(b.fundingRate) - Math.abs(a.fundingRate));
           setData(transformed);
           setError(null);
-        } else {
-          setData(mockFundingRates);
         }
       } else {
-        setData(mockFundingRates);
+        setError("API returned " + res.status);
       }
-    } catch {
-      setData(mockFundingRates);
+    } catch (e) {
+      setError("Network error");
     } finally {
       setLoading(false);
     }
