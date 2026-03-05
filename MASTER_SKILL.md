@@ -28,7 +28,7 @@ metadata:
 
 ## TABLE OF CONTENTS
 
-1. [Activation & Invitation System](#1-activation--invitation-system)
+1. [Activation](#1-activation)
 2. [Strategy Overview](#2-strategy-overview)
 3. [Complete State Machine](#3-complete-state-machine)
 4. [Default Configuration](#4-default-configuration)
@@ -50,7 +50,7 @@ metadata:
 
 ---
 
-## 1. ACTIVATION & INVITATION SYSTEM
+## 1. ACTIVATION
 
 ### 1.1 Startup Sequence
 
@@ -64,108 +64,27 @@ Display:
   Funding Rate Arbitrage Agent v1.0.0
   Delta-neutral strategy for Binance USDT-M Perpetual
 ==========================================================
-
-Welcome! Before we begin, I need to verify your invitation code.
-Please enter your invitation code:
 ```
 
-**Step 2: Collect the invitation code from the user.**
+**Step 2: Generate session ID.**
 
-The user will provide a string. Store it as `invitation_code`.
-
-**Step 3: Verify the invitation code via API.**
-
-Make the following HTTP request:
-
-```
-POST https://fundingarb-api.example.com/api/invite/verify
-Content-Type: application/json
-
-{
-  "code": "<invitation_code>"
-}
-```
-
-**Step 4: Handle the response.**
-
-- **HTTP 200 (OK)**: The code is valid. Extract the response body which contains:
-  ```json
-  {
-    "valid": true,
-    "tier": "user" | "admin",
-    "remaining_sub_invites": <number>,
-    "features": ["arbitrage", "telemetry", ...]
-  }
-  ```
-  Store `tier` and `features` for later use. Proceed to Step 5.
-
-- **HTTP 403 (Forbidden)**: The code is invalid or expired. Display:
-  ```
-  Invalid or expired invitation code.
-  Please obtain a valid invitation code from an existing user or the admin.
-  Each user can generate up to 5 sub-invitation codes from their dashboard.
-  Admin codes have unlimited sub-invitation generation.
-  ```
-  Do NOT proceed. Wait for user to provide a new code. Retry from Step 2.
-
-- **HTTP 429 (Too Many Requests)**: Rate limited. Display:
-  ```
-  Too many verification attempts. Please wait 60 seconds and try again.
-  ```
-  Wait 60 seconds, then retry.
-
-- **Any other HTTP error**: Display the status code and ask user to contact support.
-
-**Step 5: Generate session ID.**
-
-After successful verification:
 ```
 session_id = generate_uuid_v4()
 ```
 Store `session_id` in agent memory. This ID is used for:
-- Telemetry heartbeats
+- Telemetry heartbeats (if opted in)
 - Trade tracking
 - Session recovery
 
-**Step 6: Display confirmation and ask for environment.**
+**Step 3: Ask for environment.**
 
 ```
-Invitation verified successfully.
-Session ID: <session_id>
-
 Which environment would you like to use?
   1. TESTNET (recommended for first-time users)
   2. MAINNET (requires explicit confirmation)
 
 Please choose [1/2]:
 ```
-
-### 1.2 Sub-Invitation Code Generation
-
-Users may ask to generate sub-invitation codes. If so:
-
-```
-POST https://fundingarb-api.example.com/api/invite/generate
-Content-Type: application/json
-
-{
-  "parent_code": "<invitation_code>",
-  "session_id": "<session_id>"
-}
-```
-
-Response (200):
-```json
-{
-  "sub_code": "XXXX-XXXX-XXXX",
-  "remaining": <number>
-}
-```
-
-Constraints:
-- Regular users (`tier: "user"`): maximum 5 sub-codes total
-- Admin users (`tier: "admin"`): unlimited sub-code generation
-- If `remaining` is 0, inform user they have exhausted their sub-invitation quota
 
 ---
 
@@ -227,7 +146,7 @@ Funding rate arbitrage is a **delta-neutral** trading strategy that profits from
                     |  IDLE  |
                     +---+----+
                         |
-                        | Agent activated, invitation verified
+                        | Agent activated
                         v
                   +-----------+
              +--->| SCANNING  |<------------------------------+
@@ -286,8 +205,8 @@ Funding rate arbitrage is a **delta-neutral** trading strategy that profits from
 #### IDLE
 - **Description**: Agent is initialized but not yet activated.
 - **Entry condition**: Agent starts for the first time.
-- **Actions**: Perform invitation verification (Section 1), load configuration (Section 4).
-- **Transition to SCANNING**: Invitation verified AND environment selected AND API connectivity confirmed.
+- **Actions**: Load configuration (Section 4).
+- **Transition to SCANNING**: Environment selected AND API connectivity confirmed.
 
 #### SCANNING
 - **Description**: Agent is actively polling the Binance API for funding rate opportunities.
@@ -2201,7 +2120,6 @@ IF network is unreachable for > 60 seconds:
 
 For the agent to confirm before first trade:
 
-- [ ] Invitation code verified
 - [ ] Environment selected (testnet recommended)
 - [ ] API keys connected and authenticated
 - [ ] Spot account accessible (GET /api/v3/account returns 200)
