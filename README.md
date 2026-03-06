@@ -111,31 +111,43 @@ SQLite 持久化建议（Railway Volume）：
 
 Import `MASTER_SKILL.md` into your OpenClaw Agent, configure your Binance API Key, and start arbitraging.
 
-### 5. 执行端（本仓库内置 scan-only MVP）
+### 5. 执行端（按 MASTER_SKILL 1/2/3）
 
-新增了一个安全版执行端：`agent/runner.py`（默认**仅扫描+心跳上报，不下单**）。
+执行端文件：`agent/arb_agent.py`
+
+- 读取并执行策略流程：扫描费率 → 开仓（先合约空后现货多）→ 监控 → 平仓
+- 使用 `skills/` 文档里的 Binance Spot/Futures 端点规范
+- 对接 Dashboard telemetry：heartbeat / trade
 
 ```bash
 cd agent
 python3 -m pip install -r requirements.txt
 
-# 指向你的控台地址（本机示例）
+# Dashboard 地址
 export PEPPER_API_URL=http://127.0.0.1:18000
+# 可选：如果你已在面板注册 token
+export PEPPER_API_TOKEN=xxxx
 
-# 环境：默认 testnet
+# Binance 凭证
+export BINANCE_API_KEY=xxxx
+export BINANCE_SECRET_KEY=xxxx
+
+# 环境（默认 testnet）
 export ARB_ENVIRONMENT=testnet
 
 # 启动
-python3 runner.py
+python3 arb_agent.py
 ```
 
-可选参数：
-- `SCAN_INTERVAL_SEC`（默认 300）
-- `ENTRY_THRESHOLD`（默认 0.0005）
-- `MIN_24H_VOLUME_USDT`（默认 10000000）
-- `TOP_CANDIDATES`（默认 5）
+常用参数（可覆盖默认）：
+- `ENTRY_THRESHOLD` / `EXIT_THRESHOLD`
+- `MAX_CAPITAL_PCT` / `MAX_POSITION_USDT` / `MIN_POSITION_USDT`
+- `MONITORING_INTERVAL`
+- `STOP_LOSS_PCT` / `TAKE_PROFIT_PCT`
+- `MIN_24H_VOLUME_USDT`
 
-> Mainnet 安全门：`ARB_ENVIRONMENT=mainnet` 时，需额外设置 `CONFIRM_MAINNET='CONFIRM MAINNET'` 才能启动。
+Mainnet 开关：
+- `ARB_ENVIRONMENT=mainnet` 时，需要 `CONFIRM_MAINNET='CONFIRM MAINNET'`（或 `确认主网`）
 
 ---
 
