@@ -7,12 +7,15 @@ import json
 import logging
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from database import init_db
 from routes import auth, funding_rates, stats, telemetry
@@ -165,6 +168,43 @@ async def ws_funding_rates(ws: WebSocket) -> None:
             await ws.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(ws)
+
+
+# ---------------------------------------------------------------------------
+# Frontend static hosting (single Railway service)
+# ---------------------------------------------------------------------------
+
+_BACKEND_DIR = Path(__file__).resolve().parent
+_FRONTEND_DIST = (_BACKEND_DIR.parent / "frontend" / "dist").resolve()
+_ASSETS_DIR = _FRONTEND_DIST / "assets"
+
+if _ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(_ASSETS_DIR)), name="assets")
+
+
+@app.get("/", include_in_schema=False)
+async def spa_index() -> FileResponse | dict:
+    index_file = _FRONTEND_DIST / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return {"status": "ok", "hint": "Frontend dist not found. Build dashboard/frontend first."}
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(full_path: str):
+    # Keep API and WS namespaces untouched.
+    if full_path.startswith(("api/", "ws/")):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    target = (_FRONTEND_DIST / full_path).resolve()
+    if _FRONTEND_DIST.exists() and str(target).startswith(str(_FRONTEND_DIST)) and target.is_file():
+        return FileResponse(target)
+
+    index_file = _FRONTEND_DIST / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+
+    raise HTTPException(status_code=404, detail="Frontend build not found")
 
 
 # ---------------------------------------------------------------------------

@@ -4,13 +4,36 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 import aiosqlite
 
-DATABASE_PATH = os.getenv("DATABASE_URL", "sqlite:///./fundingarb.db").replace(
-    "sqlite:///", ""
-)
+
+def _resolve_sqlite_path() -> str:
+    """Resolve SQLite path with Railway volume support.
+
+    Priority:
+    1) SQLITE_PATH (plain file path)
+    2) DATABASE_URL (sqlite:///... form)
+    3) /data/fundingarb.db (Railway volume common mount)
+    4) ./fundingarb.db
+    """
+    sqlite_path = os.getenv("SQLITE_PATH")
+    if sqlite_path:
+        return sqlite_path
+
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if database_url.startswith("sqlite:///"):
+        return database_url.replace("sqlite:///", "", 1)
+
+    if Path("/data").exists():
+        return "/data/fundingarb.db"
+
+    return "./fundingarb.db"
+
+
+DATABASE_PATH = _resolve_sqlite_path()
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS heartbeats (
@@ -63,6 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp ON api_usage(timestamp);
 
 async def init_db() -> None:
     """Create tables and indices if they do not already exist."""
+    Path(DATABASE_PATH).parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(DATABASE_PATH) as db:
         await db.executescript(_SCHEMA_SQL)
         await db.commit()
