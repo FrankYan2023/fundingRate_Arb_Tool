@@ -58,7 +58,7 @@ git clone https://github.com/yansc153/fundingRate_Arb_Tool.git
 cd fundingRate_Arb_Tool
 ```
 
-### 2. 启动后端 Backend
+### 2. 本地开发（前后端分离）
 
 ```bash
 cd dashboard/backend
@@ -67,8 +67,6 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
-
-### 3. 启动前端 Frontend
 
 ```bash
 cd dashboard/frontend
@@ -79,6 +77,33 @@ npm run dev
 打开浏览器访问 `http://localhost:5173`
 
 Open your browser at `http://localhost:5173`
+
+### 3. Railway 快速部署（单服务，30分钟版）
+
+这个仓库已支持**后端直接托管前端 dist**，不再要求 Railway 同时跑两套服务。
+
+一次性准备（本地执行）：
+
+```bash
+cd dashboard/frontend
+npm install
+npm run build
+```
+
+然后部署时仅启动 FastAPI：
+
+```bash
+cd dashboard/backend
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+```
+
+SQLite 持久化建议（Railway Volume）：
+
+- 挂载卷到 `/data`
+- 设置环境变量：`SQLITE_PATH=/data/fundingarb.db`
+
+如果不设置 `SQLITE_PATH`，代码会优先尝试 `/data/fundingarb.db`，否则回退到项目目录下 `./fundingarb.db`。
 
 ### 4. 配置 AI Agent
 

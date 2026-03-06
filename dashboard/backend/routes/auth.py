@@ -17,7 +17,7 @@ from models import (
     UserInfoResponse,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 def _generate_token() -> str:
