@@ -183,7 +183,7 @@ if _ASSETS_DIR.exists():
 
 
 @app.get("/", include_in_schema=False)
-async def spa_index() -> FileResponse | dict:
+async def spa_index():
     index_file = _FRONTEND_DIST / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
