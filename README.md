@@ -111,6 +111,32 @@ SQLite 持久化建议（Railway Volume）：
 
 Import `MASTER_SKILL.md` into your OpenClaw Agent, configure your Binance API Key, and start arbitraging.
 
+### 5. 执行端（本仓库内置 scan-only MVP）
+
+新增了一个安全版执行端：`agent/runner.py`（默认**仅扫描+心跳上报，不下单**）。
+
+```bash
+cd agent
+python3 -m pip install -r requirements.txt
+
+# 指向你的控台地址（本机示例）
+export PEPPER_API_URL=http://127.0.0.1:18000
+
+# 环境：默认 testnet
+export ARB_ENVIRONMENT=testnet
+
+# 启动
+python3 runner.py
+```
+
+可选参数：
+- `SCAN_INTERVAL_SEC`（默认 300）
+- `ENTRY_THRESHOLD`（默认 0.0005）
+- `MIN_24H_VOLUME_USDT`（默认 10000000）
+- `TOP_CANDIDATES`（默认 5）
+
+> Mainnet 安全门：`ARB_ENVIRONMENT=mainnet` 时，需额外设置 `CONFIRM_MAINNET='CONFIRM MAINNET'` 才能启动。
+
 ---
 
 ## Architecture | 系统架构
